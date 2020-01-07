@@ -1,0 +1,89 @@
+---
+title: "Classification Models for Intrusion Detection System"
+author: "Vatsal Rajgor"
+date: "01/10/2019"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+**Background**
+
+The dataset to be audited was provided which consists of a wide variety of intrusions simulated in a military network environment. It created an environment to acquire raw TCP/IP dump data for a network by simulating a typical US Air Force LAN. The LAN was focused like a real environment and blasted with multiple attacks. A connection is a sequence of TCP packets starting and ending at some time duration between which data flows to and from a source IP address to a target IP address under some well-defined protocol. Also, each connection is labeled as either normal or as an attack with exactly one specific attack type. Each connection record consists of about 100 bytes.
+
+For each TCP/IP connection, 41 quantitative and qualitative features are obtained from normal and attack data (3 qualitative and 38 quantitative features).
+
+**The class variable has two categories:**
+
+* Normal 
+
+* Anomalous
+
+**Following three methods are useful when Binary Logistic Regression and ANN Fail to do the classification on large data set as both these methods use Sigmoid fucntion that is generating the probability either 0 or 1 and not between the 0 and 1** 
+
+
+```{r Data Engineering}
+IDS_CaseStudy=read.csv("D:/PGDA Files/R/Case Studies/IDS Case Study/Intrusion Detection System.csv",header = T)
+sum(is.na(IDS_CaseStudy))
+head(IDS_CaseStudy)
+str(IDS_CaseStudy)
+summary(IDS_CaseStudy)
+IDS_CaseStudy$protocol_type=factor(IDS_CaseStudy$protocol_type)
+IDS_CaseStudy$service=factor(IDS_CaseStudy$service)
+IDS_CaseStudy$flag=factor(IDS_CaseStudy$flag)
+IDS_CaseStudy$land=factor(IDS_CaseStudy$land)
+IDS_CaseStudy$logged_in=factor(IDS_CaseStudy$logged_in)
+IDS_CaseStudy$is_host_login=NULL
+IDS_CaseStudy$num_outbound_cmds=NULL
+dim(IDS_CaseStudy)
+normalize=function(x){
+  return((x-min(x))/(max(x)-min(x)))
+}
+Normalized_data=normalize(dplyr::select_if(IDS_CaseStudy, is.numeric))
+Normalized_data$class=IDS_CaseStudy$class
+Case_study_Index=sample(nrow(Normalized_data),0.75*nrow(Normalized_data))
+train=Normalized_data[Case_study_Index,]
+test=Normalized_data[-Case_study_Index,]
+```
+*It will generate the probability equal to 0 or 1 and will be unable to asign weights for obtaining activation function.*
+
+*Similar results will be generated for Logistic Regression as well since it will be unable to calculate the probability values within the range the range of 0 and 1 as one of the significant variable makes the model to assign probability with equal to 0 or 1.*
+
+*Thus, we are using following three models
+```{r RandomForest}
+library(randomForest)
+library(e1071)
+library(caret)
+RF_model_IDS=randomForest(class~.,data = train,ntree=10)
+plot(RF_model_IDS)
+pred_train=predict(RF_model_IDS,train)
+confusionMatrix(train$class,pred_train)
+pred_test=predict(RF_model_IDS,test)
+confusionMatrix(test$class,pred_test)
+
+```
+
+
+
+```{r Naive Bayes}
+#Naive Bayes
+naive_model_IDS=naiveBayes(class~.,data = train)
+predi_train_naive=predict(naive_model_IDS,train)
+predi_test_naive=predict(naive_model_IDS,test)
+confusionMatrix(train$class,predi_train_naive)
+confusionMatrix(test$class,predi_test_naive)
+
+```
+
+
+```{r SVM}
+#SVM
+svm_casestudy=svm(class~.,data = train,kernel="linear",scale = F)
+predict_svm_casestudy=predict(svm_casestudy,train)
+confusionMatrix(train$class,predict_svm_casestudy)
+predict_svm_casestudy_train=predict(svm_casestudy,test)
+confusionMatrix(test$class,predict_svm_casestudy_train)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
